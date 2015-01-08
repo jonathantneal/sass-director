@@ -26,12 +26,25 @@ function doTheThing() {
       currentDir = '',
       currentFile = '',
       finalOutput = '',
+      smallerStr = '',
       quotationStyle = '"',
       subdirCount = 0,
-      totalSubDirs = 0,
       underscore = '_', //default
       outputPlatter = document.getElementById('output-text'),
       i, lines;
+
+  //function to add files (we don't do this until later)
+  function addFiles() {
+    if (currentDir === lastDir) { //if the current lines dir is the same as the last one
+      finalOutput += 'touch ' + underscore + currentFile + extension + ';';
+    }
+    else { //if current dir != last one
+      if (i > 0) { finalOutput += 'cd ../;' } //dont cd for the first line
+      finalOutput += 'mkdir ' + currentDir + ';cd ' + currentDir +';' + 'touch ' + underscore + currentFile + extension + ';';
+    }
+  }
+
+  // ORDER STARTS HERE
 
   // Get the input & options here
   inputText = document.getElementById('input-text').value;
@@ -44,39 +57,26 @@ function doTheThing() {
   for(i = 0; i < lines.length; i++) {
     if (lines[i].charAt(0) === '@') { //skip blank lines & comments
 
-      subdirCount = ((lines[i]).match(/\//g) || []).length; //get # of subdirectories in the line
-
+      subdirCount = ((lines[i]).match(/\//g) || []).length-1; //get # of subdirectories in the line
       quotationStyle = lines[i].charAt(8); //the first character after '@import ' is the quotation style
-
-      currentDir = between(lines[i], quotationStyle, '/'); //get the directory this line refers to
       currentFile = between(lines[i],'/', quotationStyle); //get file created in this line
 
-      if (subdirCount > 1) {
-          totalSubDirs = subdirCount; //saving for cd-ing out
-           //recursive function here
-          // while (subdirCount > 1) {
-            console.log(subdirCount);
-            currentDir = between(lines[i], '/', '/');
-            finalOutput += "mkdir " + currentDir + ";";
-            // subdirCount--;
-          // }
-        //when its no longer > 1
-        for (i = 0; i < totalSubDirs; i++) {
-          finalOutput += 'cd ../'; //cd outta there
-        }
-        currentDir = between(lines[i], quotationStyle, '/');
+      if (subdirCount > 0) {
+            smallerStr = lines[i].replace(currentDir + '/',''); //remove the dir before
+            console.log(smallerStr);
+            currentDir = between(smallerStr, quotationStyle, '/');
+            currentFile = between(smallerStr,'/', quotationStyle);
+            addFiles();
+            lastDir = currentDir;
+            //recursive function removed everything before the '/' and goes through everything again
+            // after the recursive function, cd back to the begining the number of directories deep we went
+      }
+      else { //if theres only one subdir
+        currentDir = between(lines[i], quotationStyle, '/'); //get the directory this line refers to
       }
 
-      else { //if subdir == 1
-        if (currentDir === lastDir) { //if the current lines dir is the same as the last one
-          finalOutput += 'touch ' + underscore + currentFile + extension + ';';
-        }
-        else { //if current dir != last one
-          if (i > 0) { finalOutput += 'cd ../;' } //dont cd for the first line
-           finalOutput += 'mkdir ' + currentDir + ';cd ' + currentDir +';' + 'touch ' + underscore + currentFile + extension + ';';
-        }
-        lastDir = currentDir;
-      }
+      addFiles();
+      lastDir = currentDir;
     }
   }
   outputPlatter.value = finalOutput;
